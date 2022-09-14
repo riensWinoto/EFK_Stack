@@ -1,0 +1,45 @@
+version: '3'
+services:
+  opensearch:
+    image: amazon/opendistro-for-elasticsearch:1.13.2
+    container_name: opensearch
+    environment:
+      - cluster.name=opensearch-cluster
+      - node.name=opensearch
+      - discovery.seed_hosts=opensearch
+      - cluster.initial_master_nodes=opensearch
+      - bootstrap.memory_lock=true # along with the memlock settings below, disables swapping
+      - "OPENSEARCH_JAVA_OPTS=-Xms2048m -Xmx2048m" # minimum and maximum Java heap size, recommend setting both to 50% of system RAM
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+      nofile:
+        soft: 262144 # maximum number of open files for the OpenSearch user, set to at least 65536 on modern systems
+        hard: 262144
+    volumes:
+      - ./opensearch:/usr/share/opensearch/data
+    ports:
+      - 9200:9200
+      - 9300:9300
+      - 9600:9600 # required for Performance Analyzer
+    networks:
+      - opensearch-net
+
+  kibana:
+    depends_on:
+      - opensearch
+    image: amazon/opendistro-for-elasticsearch-kibana:1.13.2
+    container_name: kibana
+    environment:
+      - ELASTICSEARCH_USERNAME=admin
+      - ELASTICSEARCH_PASSWORD=admin
+      - ELASTICSEARCH_URL=https://opensearch:9200
+      - ELASTICSEARCH_HOSTS=https://opensearch:9200
+    ports:
+    - 5601:5601
+    networks:
+      - opensearch-net
+
+networks:
+  opensearch-net:
